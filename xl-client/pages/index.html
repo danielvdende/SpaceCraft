@@ -1,0 +1,155 @@
+<!DOCTYPE HTML>
+<html>
+<meta charset="UTF-8">
+  <head>
+    <title>Play</title>
+    <style>
+      .canvas{
+        background: antiquewhite;
+        border: 2px solid black;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas class="canvas" id="myBoard" width="320" height="320"></canvas>
+    <canvas class="canvas" id="opponentBoard" width="320" height="320"></canvas>
+    <button id="fire" ip=<%=ip%> playerId=<%=userData.userID%> gameId=<%=userData.gameID%> >FIRE!!!</button>
+    <button id="updateBoard" ip=<%=ip%> playerId=<%=userData.userID%> gameId=<%=userData.gameID%> >Update view</button>
+    <div id="msg"></div>
+    <div id="scores"><label class="score"></label> </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <script>
+      var canvas = document.getElementById('myBoard');
+      var context = canvas.getContext('2d');
+      var board = [
+"**.**...........",
+"..*.............",
+"**.**....***....",
+"..........*.*...",
+".........***....",
+"................",
+"................",
+"............***.",
+".......**.....*.",
+"......*.*.....*.",
+".......**.....*.",
+"......*.*.......",
+"...*...**.......",
+"*.*.*....-X.....",
+"*.*.*...........",
+".*.............."]
+
+  function clearBoard(context, x, y){
+    target = [];
+    context.clearRect(0, 0, x, y);
+  }
+
+  function drawBoard(context, boardData){
+    clearBoard(context, 320, 320)
+    //context.clearRect(0, 0, 320, 320);
+    for (i = 0; i <= 15; i++) {
+      for (j = 0; j <= 15; j++) {
+        switch(boardData[i][j]) {
+                case "*":
+      drawPixel(context, j,i,'#ffd733');
+      break;
+          case "X":
+      drawPixel(context, j,i,'#ff4040');
+      break;
+          case "-":
+      drawPixel(context, j,i,'#33fff3');
+      break;
+          default:
+      break;
+        }
+
+      }
+    }
+  }
+
+	function drawPixel(context, x, y, color){
+	      context.beginPath();
+	      context.rect(x*20, y*20, 20, 20);
+	      context.fillStyle = color;
+	      context.fill();
+	      context.lineWidth = 1;
+	      context.strokeStyle = 'black';
+	      context.stroke();
+	}
+
+	function d2h(d) {return d.toString(16).toUpperCase();}
+
+  function updateView(gameId, playerId, ipAddr){
+    console.log(ipAddr)
+    $.get("http://"+ ipAddr +":8081/xl-spaceship/game?game_id="+gameId+"&player_id="+playerId,function(data){
+      console.log(data)
+      drawBoard(context, data.self.board);
+      var score = "Your Score "+ data.self.score +" : Your opponent's Score "+ data.opponent.score
+      $("#scores").find(".score").text(score);
+    })
+  }
+
+	function getMousePos(canvas, evt) {
+		var rect = canvas.getBoundingClientRect();
+		return {
+		  x: evt.clientX - rect.left,
+		  y: evt.clientY - rect.top
+		};
+	      }
+
+	var canvas2 = document.getElementById('opponentBoard');
+	var context2 = canvas2.getContext('2d');
+	var target = [];
+	var fireButton =  document.getElementById("fire");
+  var updateBoard =  document.getElementById("updateBoard");
+
+	fireButton.addEventListener("click", function(){
+    var gameId = $(this).attr("gameId");
+    var playerId = $(this).attr("playerId");
+    var ipAddr = $(this).attr("ip");
+    var data = JSON.stringify({"salvo": target});
+    $.ajax({
+      crossDomain : true,
+      type:"PUT",
+      url: "http://"+ipAddr+":8081/game?game_id="+gameId+"&player_id="+playerId,
+      data : data,
+      contentType: "application/json"
+    }).done(function(data){
+      clearBoard(context2, 320, 320);
+      var hits = data.salvo.shots.filter(shot=> shot == "hit").length
+      $("#msg").text("Number of Hits: " + hits)
+    }).fail(function(err){
+      $("#msg").text("It was not not turn.")
+    })
+	})
+
+  updateBoard.addEventListener('click', function() {
+    var gameId = $(this).attr("gameId");
+    var playerId = $(this).attr("playerId");
+    var ip = $(this).attr("ip");
+    updateView(gameId, playerId, ip);
+  })
+
+	canvas2.addEventListener('click', function(evt) {
+		var mousePos = getMousePos(canvas2, evt);
+		var message = 'Mouse position: ' + mousePos.x + ',' + mousePos.y;
+		console.log(message);
+		var xAxis = Math.floor(mousePos.x/20)
+		var yAxis = Math.floor(mousePos.y/20)
+		var x = d2h(xAxis);
+		var y = d2h(yAxis);
+  		if(target.length < 5 && target.indexOf(x+"X"+y) == -1){
+  			drawPixel(context2, xAxis, yAxis, '#33fff3');
+  			target.push(x +"X"+ y);
+  		}
+	  }, false);
+
+    $(function(){
+      var gameId = $("#fire").attr("gameId");
+      var playerId = $("#fire").attr("playerId");
+      var ip = $("#fire").attr("ip");
+      updateView(gameId, playerId, ip);
+    })
+    </script>
+  </body>
+</html>

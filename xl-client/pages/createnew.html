@@ -1,0 +1,46 @@
+<html>
+  <head>
+    <title>Create New Game</title>
+  </head>
+  <body>
+      Player ID: <input id="playerId" ip=<%=ip%> />
+      <button id="submit"> Create</button>
+      <label id="msg"></label>
+      <a id="gameLink" hidden="hidden" href="">LINK</a>
+  </body>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+  <script>
+    $("#submit").on("click",function(event){
+      console.log(event)
+      var playerId = $("#playerId").val();
+      var ip = $("#playerId").attr("ip");
+      // $.get("http://localhost:8080/xl-spaceship/game?game_id="+gameId+"&player_id="+playerId,function(data){
+      //   drawBoard(context, data.self.board);
+      //  })
+      var data = JSON.stringify({
+              "userId": playerId,
+              "fullName": "XebiaLabs Opponent",
+              "spaceshipProtocol": {
+                "hostname": "127.0.0.1",
+                "port": 9001
+              }
+            });
+      $.ajax({
+        crossDomain : true,
+        type:"POST",
+        url: "http://"+ ip +":8081/xl-spaceship/new",
+        data : data,
+        contentType: "application/json"
+      }).done(function(data){
+        //var gameId = data.gameId;
+        var link = "http://"+ip+":3000/game/"+data.userId+"/"+data.gameId;
+        $("#gameLink").attr("href", link).removeAttr("hidden")
+        $("#msg").text("Game created successfully.")
+        console.log(data);
+      }).fail(function(err){
+        //console.log(err.statusCode().status);
+        $("#msg").text("Something went wrong !!!!")
+      })
+    })
+  </script>
+</html>
